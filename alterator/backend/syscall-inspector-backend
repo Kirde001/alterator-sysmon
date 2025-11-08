@@ -1,0 +1,17 @@
+#!/bin/sh
+
+alterator_api_version=1
+. alterator-sh-functions
+
+DB_PATH="/var/lib/syscall-inspector/data.db"
+
+on_message()
+{
+    if [ ! -f "$DB_PATH" ]; then
+        write_string_param data "Ошибка: База данных $DB_PATH не найдена."
+        return
+    fi
+    SYSCALL_DATA=$(sqlite3 -separator "    " "$DB_PATH" "SELECT timestamp, pid, comm, syscall_nr FROM syscalls ORDER BY id DESC LIMIT 20;")
+    write_string_param data "$SYSCALL_DATA"
+}
+message_loop

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Categories=X-Alterator-System
+Icon=utilities-terminal
+Name=Syscall Inspector
+Name[ru]=Инспектор Syscall
+Comment=View syscalls from the SQLite database
+Comment[ru]=Просмотр системных вызовов из базы данных SQLite
+Exec=acc-legacy /syscall-inspector
+[X-Alterator]
+Interface=org.altlinux.alterator.syscall_inspector

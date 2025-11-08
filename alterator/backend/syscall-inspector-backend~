@@ -1,0 +1,27 @@
+#!/bin/sh
+
+alterator_api_version=1
+# Подключаем стандартные функции, необходимые для message_loop и write_string_param
+. alterator-sh-functions
+
+DB_PATH="/var/lib/syscall-inspector/data.db"
+
+on_message()
+{
+    if [ ! -f "$DB_PATH" ]; then
+        write_string_param data "Ошибка: База данных $DB_PATH не найдена."
+        return
+    fi
+
+    # ИСПРАВЛЕНИЕ:
+    # Убираем опции -header и -column. Вместо них используем -separator,
+    # чтобы между столбцами был понятный разделитель (4 пробела).
+    # Это вернет чистый текст без "грязных" символов форматирования.
+    SYSCALL_DATA=$(sqlite3 -separator "    " "$DB_PATH" "SELECT timestamp, pid, comm, syscall_nr FROM syscalls ORDER BY id DESC LIMIT 20;")
+
+    # Отправляем чистые данные. И acc, и веб смогут их обработать.
+    write_string_param data "$SYSCALL_DATA"
+}
+
+# Используем стандартный цикл, который корректно форматирует ответ
+message_loop

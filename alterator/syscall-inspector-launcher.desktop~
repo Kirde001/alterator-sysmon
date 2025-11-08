@@ -1,0 +1,16 @@
+# --- Секция для стандартного меню рабочего стола ---
+[Desktop Entry]
+Type=Application
+Categories=X-Alterator-System
+Icon=utilities-terminal
+Name=Syscall Inspector
+Name[ru]=Инспектор Syscall
+Comment=View syscalls from the SQLite database
+Comment[ru]=Просмотр системных вызовов из базы данных SQLite
+# Команда, которую будет выполнять новый acc
+Exec=acc-legacy /syscall-inspector
+
+# --- Секция СПЕЦИАЛЬНО ДЛЯ НОВОГО ACC (alterator-explorer) ---
+[X-Alterator]
+# Уникальное имя интерфейса, как требует гайд
+Interface=org.altlinux.alterator.syscall_inspector
