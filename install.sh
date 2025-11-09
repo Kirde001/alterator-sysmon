@@ -72,14 +72,24 @@ build_rpms() {
     info "Загрузка исходного кода с $release_url..."
     curl -L "$release_url" -o "/home/$BUILD_USER/RPM/SOURCES/$archive_name"
 
-    info "Распаковка архива..."
-    su - "$BUILD_USER" -c "tar -xzvf ~/RPM/SOURCES/$archive_name -C ~/RPM/BUILD --strip-components=1"
+    info "Очистка директории сборки..."
+    su - "$BUILD_USER" -c "rm -rf ~/RPM/BUILD/*"
+
+    info "Распаковка архива для получения .spec файла..."
+    su - "$BUILD_USER" -c "tar -xzvf ~/RPM/SOURCES/$archive_name -C ~/RPM/BUILD"
+
+    info "Определение имени директории..."
+    local build_dir_name=$(su - "$BUILD_USER" -c "find ~/RPM/BUILD -mindepth 1 -maxdepth 1 -type d | head -1 | xargs basename")
+
+    if [ -z "$build_dir_name" ]; then
+        error "Не удалось определить имя директории в ~/RPM/BUILD"
+    fi
+    info "Найдена директория: $build_dir_name"
 
     info "Копирование .spec файла..."
-    su - "$BUILD_USER" -c "cp ~/RPM/BUILD/packaging/syscall-inspector.spec ~/RPM/SPECS/"
+    su - "$BUILD_USER" -c "cp ~/RPM/BUILD/$build_dir_name/packaging/syscall-inspector.spec ~/RPM/SPECS/"
 
     info "Запуск сборки RPM... Это может занять некоторое время."
-    local build_dir_name=$(su - "$BUILD_USER" -c "tar -tzvf ~/RPM/SOURCES/$archive_name | head -1 | awk -F/ '{print $1}'")
     su - "$BUILD_USER" -c "rpmbuild -bb --define '_builddir_name $build_dir_name' ~/RPM/SPECS/syscall-inspector.spec"
 }
 
@@ -90,6 +100,9 @@ install_rpms() {
     info "Установка новых RPM-пакетов..."
     local rpm_path="/home/$BUILD_USER/RPM/RPMS/noarch"
     rpm -Uvh "$rpm_path"/syscall-inspector-*.noarch.rpm "$rpm_path"/alterator-syscall-inspector-*.noarch.rpm
+
+    info "Обновление конфигурации systemd..."
+    systemctl daemon-reload
 
     info "Включение и запуск службы syscall-inspector..."
     systemctl enable --now syscall-inspector.service
