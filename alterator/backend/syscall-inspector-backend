@@ -4,14 +4,62 @@ alterator_api_version=1
 . alterator-sh-functions
 
 DB_PATH="/var/lib/syscall-inspector/data.db"
+FILTER_PATH="/var/lib/syscall-inspector/filter.conf" 
 
-on_message()
+read_data()
 {
-    if [ ! -f "$DB_PATH" ]; then
+    if [ ! -f "$DB_PATH" ];
+    then
         write_string_param data "Ошибка: База данных $DB_PATH не найдена."
         return
     fi
-    SYSCALL_DATA=$(sqlite3 -separator "    " "$DB_PATH" "SELECT timestamp, pid, comm, syscall_nr FROM syscalls ORDER BY id DESC LIMIT 20;")
+    SYSCALL_DATA=$(sqlite3 -separator "    " "$DB_PATH" "SELECT timestamp, pid, comm, syscall_nr FROM syscalls ORDER BY id DESC LIMIT 50;")
     write_string_param data "$SYSCALL_DATA"
+}
+
+read_filter()
+{
+    if [ ! -f "$FILTER_PATH" ]; then
+        write_string_param filter "*" # По умолчанию (все)
+    else
+        write_string_param filter "$(cat "$FILTER_PATH")"
+    fi
+}
+
+write_filter()
+{
+    local new_filter=$(read_string_param filter_value)
+    
+    new_filter=$(echo "$new_filter" | tr -cd '[:alnum:]_.-' | cut -c 1-15)
+    
+    if [ -z "$new_filter" ]; then
+        new_filter="*" # Если строка пустая, ставим "*" (все)
+    fi
+    
+    echo "$new_filter" > "$FILTER_PATH"
+    
+    systemctl restart syscall-inspector.service
+    
+    write_string_param status "success"
+    write_string_param new_filter "$new_filter"
+}
+
+
+on_message()
+{
+    case "$method" in
+        "read")
+            read_data
+            ;;
+        "read_filter")
+            read_filter
+            ;;
+        "write_filter")
+            write_filter
+            ;;
+        *)
+            read_data
+            ;;
+    esac
 }
 message_loop

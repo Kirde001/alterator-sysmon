@@ -5,10 +5,17 @@
  (label text (bold "Инспектор Syscall (ACC)"))
  (label text " ")
  
+ (hbox
+  (label text "Отслеживать процесс (comm): ")
+  (entry name "filter_input" text "*")
+  (button name "save_filter_button" text "Применить")
+ )
+ (label name "filter_status" text " ")
+ 
+ (label text " ")
  (textbox name "data_display" height 400)
 
  (label text " ")
- (button name "update_button" text "Обновить данные из БД")
  )
 
 (document:root

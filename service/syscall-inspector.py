@@ -9,8 +9,9 @@ from bcc import BPF
 
 DB_PATH = "/var/lib/syscall-inspector/data.db"
 DB_DIR = os.path.dirname(DB_PATH)
+FILTER_PATH = "/var/lib/syscall-inspector/filter.conf"
 
-bpf_program_text = """
+bpf_program_template = """
 #include <linux/sched.h>
 
 struct data_t {
@@ -26,9 +27,7 @@ TRACEPOINT_PROBE(raw_syscalls, sys_enter) {
     char comm[TASK_COMM_LEN]; 
     bpf_get_current_comm(&comm, sizeof(comm));
 
-    if (__builtin_memcmp(comm, "bash", 4) != 0) {
-        return 0; 
-    }
+    {filter_check}
 
     data.pid = bpf_get_current_pid_tgid() >> 32;
     __builtin_memcpy(data.comm, comm, TASK_COMM_LEN); 
@@ -84,13 +83,40 @@ class SyscallDaemon:
             if self.conn and "closed" not in str(e):
                 print(f"Ошибка записи в БД: {e}", file=sys.stderr)
 
+    def get_filter_code(self):
+        target_comm = "" # По умолчанию отслеживаем все
+        if os.path.exists(FILTER_PATH):
+            try:
+                with open(FILTER_PATH, 'r') as f:
+                    target_comm = f.read().strip()
+            except Exception as e:
+                print(f"Не удалось прочитать файл фильтра {FILTER_PATH}: {e}", file=sys.stderr)
+
+        if not target_comm or target_comm == "*":
+            print("Фильтр не установлен. Отслеживаем все процессы.", file=sys.stderr)
+            return "" # Возвращаем пустую строку, фильтрации не будет
+
+        if len(target_comm) > 15:
+             target_comm = target_comm[:15]
+        
+        print(f"Применение фильтра eBPF для comm: '{target_comm}'", file=sys.stderr)
+        filter_c = f'if (__builtin_memcmp(comm, "{target_comm}", {len(target_comm)}) != 0) {{ return 0; }}'
+        return filter_c
+
     def run(self):
         self.init_db()
+        filter_check_c = self.get_filter_code()
+        final_bpf_program = bpf_program_template.format(filter_check=filter_check_c)
+
         try:
-            self.bpf = BPF(text=bpf_program_text)
+            self.bpf = BPF(text=final_bpf_program)
         except Exception as e:
             print(f"Критическая ошибка загрузки eBPF: {e}", file=sys.stderr)
+            print("--- Текст программы BPF: ---", file=sys.stderr)
+            print(final_bpf_program, file=sys.stderr)
+            print("---------------------------", file=sys.stderr)
             sys.exit(1)
+            
         self.bpf["events"].open_perf_buffer(self.process_event)
         while True:
             try:

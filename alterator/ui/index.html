@@ -19,6 +19,9 @@
             max-height: 60vh;
             overflow-y: auto;
         }
+        #filter-container { margin-bottom: 1.5em; display: flex; align-items: center; }
+        #filter-input { font-size: 1em; padding: 0.4em; margin: 0 0.5em; border: 1px solid #ccc; border-radius: 4px;}
+        #filter-status { margin-left: 1em; font-style: italic; }
         button { 
             font-size: 1em; 
             padding: 0.5em 1em; 
@@ -33,23 +36,61 @@
 </head>
 <body>
     <h1>Инспектор системных вызовов</h1>
-    <pre id="data-container">Загрузка данных...</pre>
-    <button id="update-btn">Обновить</button>
 
+    <div id="filter-container">
+        <label for="filter-input"><b>Отслеживать процесс (comm):</b></label>
+        <input type="text" id="filter-input" placeholder="Напр: sshd (или * для всех)">
+        <button id="save-filter-btn">Применить</button>
+        <span id="filter-status"></span>
+    </div>
+
+    <pre id="data-container">Загрузка данных...</pre>
     <script type="text/javascript">
+        var backend = new AlteratorAjax();
+
         function updateData() {
             var container = $('data-container');
-            container.textContent = 'Загрузка...';
-            var backend = new AlteratorAjax();
+            if (container.textContent === 'Загрузка данных...') {
+                 container.textContent = 'Загрузка...';
+            }
+           
             backend.syscall_inspector.read(function(response) {
                 container.textContent = response.data || "В базе данных пока нет записей.";
             }, function(error) {
                 container.textContent = 'ОШИБКА AJAX: ' + (error.message || 'Неизвестная ошибка');
             });
         }
+        
+        function loadCurrentFilter() {
+            var status = $('filter-status');
+            status.textContent = 'Загрузка фильтра...';
+            backend.syscall_inspector.read_filter(function(response) {
+                $('filter-input').value = response.filter;
+                status.textContent = '';
+            }, function(error) {
+                status.textContent = 'Ошибка загрузки фильтра.';
+            });
+        }
+
+        function saveFilter() {
+            var newFilter = $('filter-input').value;
+            var status = $('filter-status');
+            status.textContent = 'Применение...';
+            
+            backend.syscall_inspector.write_filter({ filter_value: newFilter }, function(response) {
+                status.textContent = 'Фильтр применен!';
+                $('filter-input').value = response.new_filter; 
+                updateData(); 
+            }, function(error) {
+                status.textContent = 'Ошибка сохранения фильтра.';
+            });
+        }
+
         window.onload = function() {
-            $('update-btn').onclick = updateData;
+            $('save-filter-btn').onclick = saveFilter;
+            loadCurrentFilter();
             updateData();
+            setInterval(updateData, 5000); // 5000 мс
         };
     </script>
 </body>
