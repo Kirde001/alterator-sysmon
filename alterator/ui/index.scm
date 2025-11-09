@@ -7,9 +7,7 @@
  
  (hbox
   (label text "Отслеживать процесс (comm): ")
-  
-  (combobox name "filter_input" text "*" (on-get-value (form-value "filter_input")))
-  
+  (combobox name "filter_input")
   (button name "save_filter_button" text "Применить")
  )
  (label name "filter_status" text " ")

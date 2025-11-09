@@ -10,6 +10,7 @@
      (let ((data (woo-read-first "/syscall-inspector" 'method "read")))
        (let ((message (woo-get-option data 'data)))
          (form-update-value "data_display" message))))))
+
 (define (load-processes)
   (catch/message
    (lambda ()
@@ -38,7 +39,6 @@
          (do-update)
        )))))
     
-
 (define (on-load)
   (form-bind "save_filter_button" "click" save-filter)
   (form-bind "update_button" "click" do-update) 
