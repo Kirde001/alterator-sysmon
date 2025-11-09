@@ -7,7 +7,7 @@
  
  (hbox
   (label text "Отслеживать процесс (comm): ")
-  (entry name "filter_input" text "*")
+  (entrybox name "filter_input" text "*")
   (button name "save_filter_button" text "Применить")
  )
  (label name "filter_status" text " ")
