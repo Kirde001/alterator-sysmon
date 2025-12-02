@@ -99,7 +99,8 @@ install_rpms() {
 
     info "Установка новых RPM-пакетов..."
     local rpm_path="/home/$BUILD_USER/RPM/RPMS/noarch"
-    rpm -Uvh "$rpm_path"/syscall-inspector-*.noarch.rpm "$rpm_path"/alterator-syscall-inspector-*.noarch.rpm
+   # rpm -Uvh "$rpm_path"/syscall-inspector-*.noarch.rpm "$rpm_path"/alterator-syscall-inspector-*.noarch.rpm
+    apt-get install -y "$rpm_path"/syscall-inspector-*.noarch.rpm "$rpm_path"/alterator-syscall-inspector-*.noarch.rpm
 
     info "Обновление конфигурации systemd..."
     systemctl daemon-reload
