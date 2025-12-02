@@ -1,81 +1,91 @@
-#!/bin/sh
+#!/bin/bash
 
+export PATH=/usr/bin:/usr/sbin:/bin:/sbin
 alterator_api_version=1
-. alterator-sh-functions
+
+if [ -f /usr/share/alterator/build/alterator-sh-functions ]; then
+    . /usr/share/alterator/build/alterator-sh-functions
+elif [ -f /usr/lib/alterator/sh/alterator-sh-functions ]; then
+    . /usr/lib/alterator/sh/alterator-sh-functions
+else
+    . alterator-sh-functions 2>/dev/null || exit 1
+fi
 
 DB_PATH="/var/lib/syscall-inspector/data.db"
-FILTER_PATH="/var/lib/syscall-inspector/filter.conf" 
+FILTER_PATH="/var/lib/syscall-inspector/filter.conf"
 
-read_data()
-{
-    if [ ! -f "$DB_PATH" ];
-    then
-        write_string_param data "Ошибка: База данных $DB_PATH не найдена."
+get_current_filter() {
+    if [ -f "$FILTER_PATH" ]; then
+        head -n 1 "$FILTER_PATH" 2>/dev/null
+    else
+        echo "*"
+    fi
+}
+
+get_filter_list_str() {
+    if [ -s "$FILTER_PATH" ]; then
+        tr -d '\r' < "$FILTER_PATH" 2>/dev/null | tr '\n' ', ' | sed 's/,\s*$//'
+    else
+        echo "(Все процессы)"
+    fi
+}
+
+list_data() {
+    if [ ! -f "$DB_PATH" ]; then
         return
     fi
-    SYSCALL_DATA=$(sqlite3 -separator "    " "$DB_PATH" "SELECT timestamp, pid, comm, syscall_nr FROM syscalls ORDER BY id DESC LIMIT 50;")
-    write_string_param data "$SYSCALL_DATA"
-}
 
-read_filter()
-{
-    if [ ! -f "$FILTER_PATH" ]; then
-        write_string_param filter "*" # По умолчанию (все)
+    local sql_query=""
+    local base_select="SELECT timestamp, pid, comm, syscall_name, count FROM syscalls"
+    local sort_limit="ORDER BY id DESC LIMIT 50"
+
+    if [ ! -s "$FILTER_PATH" ]; then
+        sql_query="$base_select WHERE comm NOT LIKE 'syscall-inspect%' AND comm NOT LIKE 'alteratord%' $sort_limit;"
     else
-        write_string_param filter "$(cat "$FILTER_PATH")"
+        local conditions
+        conditions=$(tr -d '\r' < "$FILTER_PATH" | awk 'NF { if (out) out = out " OR "; out = out "comm = \047" $1 "\047" } END { print out }')
+        
+        if [ -n "$conditions" ]; then
+             sql_query="$base_select WHERE ($conditions) $sort_limit;"
+        else
+             sql_query="$base_select WHERE comm NOT LIKE 'syscall-inspect%' AND comm NOT LIKE 'alteratord%' $sort_limit;"
+        fi
     fi
-}
 
-write_filter()
-{
-    local new_filter=$(read_string_param filter_value)
-    
-    # Очистка (оставляем ее для безопасности)
-    new_filter=$(echo "$new_filter" | tr -cd '[:alnum:]_.-' | cut -c 1-15)
-    
-    if [ -z "$new_filter" ]; then
-        new_filter="*"
-    fi
-    
-    echo "$new_filter" > "$FILTER_PATH"
-    
-    systemctl restart syscall-inspector.service
-    
-    write_string_param status "success"
-    write_string_param new_filter "$new_filter"
-}
-
-get_processes()
-{
-    write_string_param name "*"
-    write_string_param label " (Отслеживать все)"
-    
-    ps -eo comm --no-headers | sort -u | while read proc;
-    do
-        write_string_param name "$proc"
-        write_string_param label "$proc"
+    sqlite3 -separator "|" "$DB_PATH" "$sql_query" 2>/dev/null |
+    while IFS="|" read -r ts pid comm name cnt; do
+        write_table_item time "$ts" pid "$pid" comm "$comm" nr "$name" count "$cnt"
     done
 }
 
+read_filter_info() {
+    write_string_param filter_list "$(get_filter_list_str)"
+}
 
-on_message()
-{
-    case "$method" in
-        "read")
-            read_data
-            ;;
-        "read_filter")
-            read_filter
-            ;;
-        "write_filter")
-            write_filter
-            ;;
-        "get_processes") 
-            get_processes
-            ;;
-        *)
-            read_data
-            ;;
+add_filter() {
+    local new_proc=$(echo "$in_filter_value" | tr -cd '[:alnum:]_.-' | cut -c 1-15)
+    if [ -n "$new_proc" ]; then
+        mkdir -p "$(dirname "$FILTER_PATH")" 2>/dev/null
+        if ! grep -qxF "$new_proc" "$FILTER_PATH" 2>/dev/null; then
+            echo "$new_proc" >> "$FILTER_PATH"
+        fi
+    fi
+    read_filter_info
+}
+
+reset_filter() {
+    : > "$FILTER_PATH" 2>/dev/null
+    read_filter_info
+}
+
+on_message() {
+    case "$in_action" in
+        "list")          list_data ;;
+        "add_filter")    add_filter ;;
+        "reset_filter")  reset_filter ;;
+        "read_filter")   read_filter_info ;;
+        *)               list_data ;;
     esac
 }
-message_loop
+
+message_loop || exit 0
