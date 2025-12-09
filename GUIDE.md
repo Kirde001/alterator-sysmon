@@ -18,7 +18,7 @@ log_format = json
 </localfile>
 ```
 
-# Пример правил для проверки:
+### Пример правил для проверки:
 ```bash
 <group name="syscall_inspector,">
   <rule id="100010" level="1">
@@ -41,13 +41,27 @@ log_format = json
   </rule>
 </group>
 ```
-# После изменений - systemctl restart wazuh-manager
-
-# Проверка основной службы - systemctl status syscall-inspector
-
-# Проверка генерации логов - cat /etc/shadow. После проверка системного журнала: journalctl -t syscall-ebpf -n 10
-
-# Поиск ошибок на агенте: grep -i "error" /var/ossec/logs/ossec.log
-
-# Проверяем, идут ли логи до Wazuh-сервера: grep "syscall-ebpf" /var/ossec/logs/archives/archives.json | tail
-
+### После изменений:
+```bash
+systemctl restart wazuh-manager
+```
+### Проверка основной службы:
+```bash
+systemctl status syscall-inspector
+```
+### Проверка генерации логов:
+```bash
+cat /etc/shadow
+```
+### После проверка системного журнала: 
+```bash
+journalctl -t syscall-ebpf -n 10
+```
+### Поиск ошибок на агенте: 
+```bash
+grep -i "error" /var/ossec/logs/ossec.log
+```
+### Проверяем, идут ли логи до Wazuh-сервера: 
+```bash
+grep "syscall-ebpf" /var/ossec/logs/archives/archives.json | tail
+```
