@@ -40,6 +40,8 @@ make install DESTDIR=%{buildroot}
 /usr/share/applications/syscall-inspector-launcher.desktop
 /usr/share/alterator/ui/syscall-inspector/
 /usr/lib/alterator/backend3/syscall-inspector
+/usr/share/alterator/help/ru_RU/syscall-inspector.html
+/usr/share/alterator/help/en_US/syscall-inspector.html
 
 %post
 %systemd_post syscall-inspector.service

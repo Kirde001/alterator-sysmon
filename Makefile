@@ -1,5 +1,3 @@
-.PHONY: install
-
 install:
 	# service
 	install -d $(DESTDIR)/usr/sbin/
@@ -14,10 +12,17 @@ install:
 
 	# ui & backend
 	install -d $(DESTDIR)/usr/share/alterator/ui/syscall-inspector/
-	install -m 0644 alterator/ui/* $(DESTDIR)/usr/share/alterator/ui/syscall-inspector/
+	install -m 0644 alterator/ui/*.scm $(DESTDIR)/usr/share/alterator/ui/syscall-inspector/
 	
 	install -d $(DESTDIR)/usr/lib/alterator/backend3/
 	install -m 0755 alterator/backend/syscall-inspector-backend $(DESTDIR)/usr/lib/alterator/backend3/syscall-inspector
+
+	# help
+	install -d $(DESTDIR)/usr/share/alterator/help/ru_RU/
+	install -m 0644 alterator/ui/help/ru_RU/index.html $(DESTDIR)/usr/share/alterator/help/ru_RU/syscall-inspector.html
+	
+	install -d $(DESTDIR)/usr/share/alterator/help/en_US/
+	install -m 0644 alterator/ui/help/en_US/index.html $(DESTDIR)/usr/share/alterator/help/en_US/syscall-inspector.html
 
 	# desktop files
 	install -d $(DESTDIR)/usr/share/alterator/applications/

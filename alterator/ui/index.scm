@@ -43,9 +43,9 @@
 
   (listbox 
     name "data_table"
-    columns 5
-    header (vector "Время" "Важность" "Тип события" "Процесс" "Детали")
-    row '#((time . "") (severity . "") (type . "") (process . "") (details . ""))
+    columns 6
+    header (vector "Время" "Важность" "Тип события" "Пользователь" "Процесс" "Детали")
+    row '#((time . "") (severity . "") (type . "") (username . "") (process . "") (details . ""))
     enumref "/syscall-inspector"
   )
 )

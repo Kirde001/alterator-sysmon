@@ -19,9 +19,9 @@ ensure_config() {
 list_data() {
     if [ ! -f "$DB_PATH" ]; then return; fi
     sqlite3 -separator "|" "$DB_PATH" \
-    "SELECT timestamp, severity, event_type, process, details FROM alerts ORDER BY id DESC LIMIT 100;" 2>/dev/null |
-    while IFS="|" read -r ts sev type proc det; do
-        write_table_item time "$ts" severity "$sev" type "$type" process "$proc" details "$det"
+    "SELECT timestamp, severity, event_type, username, process, details FROM alerts ORDER BY id DESC LIMIT 100;" 2>/dev/null |
+    while IFS="|" read -r ts sev type user proc det; do
+        write_table_item time "$ts" severity "$sev" type "$type" username "$user" process "$proc" details "$det"
     done
 }
 

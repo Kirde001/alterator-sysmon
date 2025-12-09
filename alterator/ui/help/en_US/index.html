@@ -1,0 +1,43 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  </head>
+  <body>
+    <h2>System Monitoring (eBPF)</h2>
+
+    <p>This module is designed to monitor suspicious system activity.
+    Using <strong>eBPF</strong> technology, it intercepts Linux kernel system calls,
+    allowing you to record process execution and access to critical files.</p>
+
+    <h3>Key Features</h3>
+    <ul>
+      <li><strong>Process Analysis:</strong> Capture all program executions (including command line arguments).</li>
+      <li><strong>File Control:</strong> Monitor attempts to read or write to critical system files (e.g., <em>/etc/shadow</em>, <em>/etc/passwd</em>).</li>
+      <li><strong>SIEM Integration:</strong> Ability to send security events to external systems (Wazuh, ArcSight) via Syslog.</li>
+    </ul>
+
+    <h3>Module Settings</h3>
+    <p>The following options are available at the top of the window:</p>
+    <ul>
+      <li><strong>Enable Syslog/SIEM:</strong> If checked, events will be duplicated to the system log.</li>
+      <li><strong>Log Format:</strong> Select the data format (RFC 3164, JSON, or CEF).</li>
+    </ul>
+
+    <h3>Event Table</h3>
+    <p>The table displays the latest recorded events:</p>
+    <ul>
+      <li><strong>Severity:</strong> Threat level (Critical, High, Medium, Low).</li>
+      <li><strong>Event Type:</strong> <em>process_execution</em> or <em>sensitive_file_access</em>.</li>
+      <li><strong>User:</strong> The real username of the user who initiated the action (even when using sudo).</li>
+      <li><strong>Process:</strong> The program that performed the action.</li>
+      <li><strong>Details:</strong> Detailed information (file path, parent process).</li>
+    </ul>
+
+    <h3>Rules Configuration</h3>
+    <p>Fine-tuning of filtering is done via the configuration file:</p>
+    <p><code>/etc/syscall-inspector/rules.json</code></p>
+    <p>You can configure lists of ignored processes and file extensions to reduce "noise" in the logs.</p>
+  </body>
+</html>

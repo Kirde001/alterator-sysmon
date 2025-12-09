@@ -9,6 +9,7 @@ import configparser
 import time
 import json
 import fnmatch
+import pwd
 from datetime import datetime, timedelta
 from bcc import BPF
 
@@ -64,6 +65,14 @@ TRACEPOINT_PROBE(syscalls, sys_enter_execve) {
     return 0;
 }
 
+TRACEPOINT_PROBE(syscalls, sys_enter_execveat) {
+    struct data_t data = {};
+    fill_data(&data, 1);
+    bpf_probe_read_user(data.fname, sizeof(data.fname), args->filename);
+    events.perf_submit(args, &data, sizeof(data));
+    return 0;
+}
+
 TRACEPOINT_PROBE(syscalls, sys_enter_openat) {
     struct data_t data = {};
     fill_data(&data, 2);
@@ -83,6 +92,7 @@ class RuleEngine:
         return {
             "ignore_extensions": [".png", ".jpg", ".so", ".pyc", ".swp"],
             "global_ignore_processes": ["syscall-inspect"],
+            "global_ignore_parents": ["systemd"],
             "filters": {
                 "process_execution": {
                     "mode": "exclude", 
@@ -108,13 +118,28 @@ class RuleEngine:
             self.rules = self._load_default_rules()
 
     def is_process_ignored(self, comm):
-        return comm in self.rules.get("global_ignore_processes", [])
+        ignored = self.rules.get("global_ignore_processes", [])
+        if comm in ignored:
+            return True
+        for i in ignored:
+            if i.endswith("-") and comm.startswith(i):
+                return True
+        return False
+
+    def is_parent_ignored(self, pcomm):
+        ignored = self.rules.get("global_ignore_parents", [])
+        if pcomm in ignored:
+            return True
+        for i in ignored:
+             if i.endswith("-") and pcomm.startswith(i):
+                return True
+        return False
 
     def is_extension_ignored(self, filename):
         exts = tuple(self.rules.get("ignore_extensions", []))
         if not exts:
             return False
-        return filename.endswith(exts)
+        return filename.endswith(exts) or filename.endswith("~")
 
     def _check_list(self, value, pattern_list):
         for pattern in pattern_list:
@@ -158,6 +183,7 @@ class SyscallDaemon:
         self.my_pid = os.getpid()
         self.dedup_cache = {}
         self.rule_engine = RuleEngine()
+        self.user_cache = {}
 
         syslog.openlog(ident="syscall-ebpf", logoption=syslog.LOG_PID, facility=syslog.LOG_USER)
         signal.signal(signal.SIGINT, self.signal_handler)
@@ -171,6 +197,7 @@ class SyscallDaemon:
         self.load_config()
         self.rule_engine.reload_rules()
         self.cleanup_logs()
+        self.user_cache.clear()
 
     def load_config(self):
         try:
@@ -201,6 +228,7 @@ class SyscallDaemon:
                     event_type TEXT,
                     process TEXT,
                     pid INTEGER,
+                    username TEXT,
                     details TEXT
                 )
             ''')
@@ -209,24 +237,27 @@ class SyscallDaemon:
             sys.exit(1)
 
     def cleanup_logs(self):
-        """Удаляет логи старше self.retention_days дней"""
         if not self.conn:
             return
-            
         try:
             cutoff_date = (datetime.now() - timedelta(days=self.retention_days)).isoformat()
             cursor = self.conn.cursor()
-            
             cursor.execute("DELETE FROM alerts WHERE timestamp < ?", (cutoff_date,))
-            deleted_count = cursor.rowcount
-            
-            if deleted_count > 0:
+            if cursor.rowcount > 0:
                 self.conn.commit()
                 cursor.execute("VACUUM")
-                syslog.syslog(syslog.LOG_INFO, f"Log rotation: deleted {deleted_count} alerts older than {self.retention_days} days.")
-            
-        except Exception as e:
-            syslog.syslog(syslog.LOG_ERR, f"Log rotation failed: {e}")
+        except Exception:
+            pass
+
+    def get_username(self, uid):
+        if uid in self.user_cache:
+            return self.user_cache[uid]
+        try:
+            name = pwd.getpwuid(uid).pw_name
+            self.user_cache[uid] = name
+            return name
+        except KeyError:
+            return str(uid)
 
     def should_log(self, pid, event_type, details):
         current_time = time.time()
@@ -235,14 +266,14 @@ class SyscallDaemon:
 
         key = (pid, event_type, details)
         last_time = self.dedup_cache.get(key)
-
+        
         if last_time and (current_time - last_time < 2.0):
             return False
         
         self.dedup_cache[key] = current_time
         return True
 
-    def send_syslog(self, severity_code, event_type, process, pid, ppid, details):
+    def send_syslog(self, severity_code, event_type, process, pid, username, details):
         priority = syslog.LOG_INFO
         if severity_code == "critical": priority = syslog.LOG_CRIT
         elif severity_code == "high": priority = syslog.LOG_ALERT
@@ -255,7 +286,7 @@ class SyscallDaemon:
                 "event_type": event_type,
                 "process": process,
                 "pid": pid,
-                "ppid": ppid,
+                "user": username,
                 "details": details,
                 "severity": severity_code, 
                 "timestamp": datetime.now().isoformat()
@@ -265,29 +296,30 @@ class SyscallDaemon:
             sev_num = 5
             if severity_code == "critical": sev_num = 10
             elif severity_code == "high": sev_num = 8
-            msg = f"CEF:0|AltLinux|SyscallInspector|1.0|{event_type}|{event_type}|{sev_num}|src=127.0.0.1 proc={process} pid={pid} msg={details}"
+            msg = f"CEF:0|AltLinux|SyscallInspector|1.0|{event_type}|{event_type}|{sev_num}|src=127.0.0.1 suid={username} proc={process} pid={pid} msg={details}"
         else: 
-            msg = f"WAZUH_EVENT: {event_type} | SEVERITY: {severity_code} | PROCESS: {process} | PID: {pid} | DETAILS: {details}"
+            msg = f"WAZUH_EVENT: {event_type} | SEVERITY: {severity_code} | USER: {username} | PROCESS: {process} | PID: {pid} | DETAILS: {details}"
 
         syslog.syslog(priority, msg)
 
-    def log_event(self, severity_code, event_type, process, pid, ppid, pcomm, details):
+    def log_event(self, severity_code, event_type, process, pid, ppid, pcomm, uid, details):
         if not self.should_log(pid, event_type, details):
             return
 
+        username = self.get_username(uid)
         timestamp = datetime.now().isoformat()
         enriched_details = f"{details} [Parent: {pcomm} ({ppid})]"
 
         if self.siem_enabled:
-            self.send_syslog(severity_code, event_type, process, pid, ppid, details)
+            self.send_syslog(severity_code, event_type, process, pid, username, details)
 
         severity_ru = SEVERITY_MAP.get(severity_code, severity_code)
 
         try:
             cursor = self.conn.cursor()
             cursor.execute(
-                "INSERT INTO alerts (timestamp, severity, event_type, process, pid, details) VALUES (?, ?, ?, ?, ?, ?)",
-                (timestamp, severity_ru, event_type, process, pid, enriched_details)
+                "INSERT INTO alerts (timestamp, severity, event_type, process, pid, username, details) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (timestamp, severity_ru, event_type, process, pid, username, enriched_details)
             )
             self.conn.commit()
         except Exception:
@@ -300,32 +332,38 @@ class SyscallDaemon:
             return
 
         comm = event.comm.decode('utf-8', 'replace').strip()
-        
-        if self.rule_engine.is_process_ignored(comm):
+        pcomm = event.pcomm.decode('utf-8', 'replace').strip()
+
+        if event.type != 1:
+            if self.rule_engine.is_process_ignored(comm):
+                return
+
+        if self.rule_engine.is_parent_ignored(pcomm):
             return
             
         fname = event.fname.decode('utf-8', 'replace')
-        pcomm = event.pcomm.decode('utf-8', 'replace')
 
         if self.rule_engine.is_extension_ignored(fname):
             return
         
         if event.type == 1:
             target_proc = fname if fname else comm
+            
             alert, severity = self.rule_engine.evaluate("process_execution", target_proc)
+            
             if alert:
-                self.log_event(severity, "process_execution", comm, event.pid, event.ppid, pcomm, f"Запуск команды: {fname}")
+                self.log_event(severity, "process_execution", target_proc, event.pid, event.ppid, comm, event.uid, f"Запуск команды: {fname}")
             
         elif event.type == 2:
             alert, severity = self.rule_engine.evaluate("sensitive_file_access", fname)
             if alert:
-                self.log_event(severity, "sensitive_file_access", comm, event.pid, event.ppid, pcomm, f"Доступ к файлу: {fname}")
+                self.log_event(severity, "sensitive_file_access", comm, event.pid, event.ppid, pcomm, event.uid, f"Доступ к файлу: {fname}")
 
     def run(self):
         self.init_storage()
         self.load_config()
         self.cleanup_logs()
-
+        
         try:
             self.bpf = BPF(text=bpf_program)
         except Exception:

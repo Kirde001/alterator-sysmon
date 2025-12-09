@@ -9,3 +9,4 @@ X-Alterator-Weight=10
 Name[ru]=Системный мониторинг
 Comment=eBPF Security Monitor
 Comment[ru]=Мониторинг системных вызовов и угроз безопасности
+X-Alterator-Help=syscall-inspector
