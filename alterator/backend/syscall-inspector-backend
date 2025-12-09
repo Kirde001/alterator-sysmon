@@ -11,7 +11,7 @@ ensure_config() {
     if [ ! -f "$CONFIG_PATH" ]; then
         mkdir -p "$(dirname "$CONFIG_PATH")"
         echo "[General]" > "$CONFIG_PATH"
-        echo "wazuh_enabled = true" >> "$CONFIG_PATH"
+        echo "siem_enabled = true" >> "$CONFIG_PATH"
         echo "log_format = rfc3164" >> "$CONFIG_PATH"
     fi
 }
@@ -27,25 +27,22 @@ list_data() {
 
 list_formats() {
     write_enum_item "rfc3164" "RFC 3164 (Standard)"
-    write_enum_item "cef" "CEF (ArcSight/Enterprise)"
-    write_enum_item "json" "JSON (Wazuh/ELK)"
+    write_enum_item "cef"     "CEF (ArcSight/Enterprise)"
+    write_enum_item "json"    "JSON (Wazuh/ELK)"
 }
 
 read_config() {
     ensure_config
     
-    local val
-    val=$(grep "^wazuh_enabled" "$CONFIG_PATH" | cut -d'=' -f2 | tr -d '[:space:]')
-    
-    if [ "$val" = "true" ]; then
-        write_bool_param wazuh_enabled #t
+    if grep -q "^siem_enabled\s*=\s*true" "$CONFIG_PATH"; then
+        write_bool_param siem_enabled true
     else
-        write_bool_param wazuh_enabled #f
+        write_bool_param siem_enabled false
     fi
 
     local fmt
     fmt=$(grep "^log_format" "$CONFIG_PATH" | cut -d'=' -f2 | tr -d '[:space:]')
-    if [ -z "$fmt" ]; then fmt="rfc3164"; fi
+    [ -z "$fmt" ] && fmt="rfc3164"
     
     write_string_param log_format "$fmt"
 }
@@ -56,13 +53,25 @@ write_config() {
     local format=$2
     
     if [ "$enabled" = "#t" ]; then
-        sed -i 's/^wazuh_enabled.*/wazuh_enabled = true/' "$CONFIG_PATH"
+        if grep -q "siem_enabled" "$CONFIG_PATH"; then
+            sed -i 's/^siem_enabled.*/siem_enabled = true/' "$CONFIG_PATH"
+        else
+            echo "siem_enabled = true" >> "$CONFIG_PATH"
+        fi
     else
-        sed -i 's/^wazuh_enabled.*/wazuh_enabled = false/' "$CONFIG_PATH"
+        if grep -q "siem_enabled" "$CONFIG_PATH"; then
+            sed -i 's/^siem_enabled.*/siem_enabled = false/' "$CONFIG_PATH"
+        else
+            echo "siem_enabled = false" >> "$CONFIG_PATH"
+        fi
     fi
 
     if [ -n "$format" ]; then
-        sed -i "s/^log_format.*/log_format = $format/" "$CONFIG_PATH"
+        if grep -q "log_format" "$CONFIG_PATH"; then
+            sed -i "s/^log_format.*/log_format = $format/" "$CONFIG_PATH"
+        else
+            echo "log_format = $format" >> "$CONFIG_PATH"
+        fi
     fi
 
     systemctl try-restart syscall-inspector.service
@@ -73,7 +82,7 @@ on_message() {
         "list")          list_data ;;
         "list_formats")  list_formats ;;
         "read_config")   read_config ;;
-        "save_config")   write_config "$in_wazuh_enabled" "$in_log_format" ;;
+        "save_config")   write_config "$in_siem_enabled" "$in_log_format" ;;
         *)               list_data ;;
     esac
 }

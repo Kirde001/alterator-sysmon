@@ -72,7 +72,7 @@ class SyscallDaemon:
         self.running = True
         self.conn = None
         self.bpf = None
-        self.wazuh_enabled = True
+        self.siem_enabled = True # Renamed
         self.log_format = "rfc3164"
         self.my_pid = os.getpid()
         self.dedup_cache = {}
@@ -96,10 +96,11 @@ class SyscallDaemon:
             if os.path.exists(CONFIG_PATH):
                 config.read(CONFIG_PATH)
                 if 'General' in config:
-                    self.wazuh_enabled = config['General'].getboolean('wazuh_enabled', fallback=True)
+                    # Renamed variable
+                    self.siem_enabled = config['General'].getboolean('siem_enabled', fallback=True)
                     self.log_format = config['General'].get('log_format', 'rfc3164')
         except Exception:
-            self.wazuh_enabled = True
+            self.siem_enabled = True
             self.log_format = "rfc3164"
 
     def init_storage(self):
@@ -175,7 +176,7 @@ class SyscallDaemon:
         timestamp = datetime.now().isoformat()
         enriched_details = f"{details} [Parent: {pcomm} ({ppid})]"
 
-        if self.wazuh_enabled:
+        if self.siem_enabled: # Renamed
             self.send_syslog(severity, event_type, process, pid, ppid, details)
 
         try:
@@ -202,13 +203,12 @@ class SyscallDaemon:
         pcomm = event.pcomm.decode('utf-8', 'replace')
         
         if event.type == 1:
-            self.log_event("medium", "process_execution", comm, event.pid, event.ppid, pcomm, f"запуск команды: {fname}")
+            self.log_event("medium", "process_execution", comm, event.pid, event.ppid, pcomm, f"Запуск команды: {fname}")
             
         elif event.type == 2:
             if any(x in fname for x in ["ld.so.cache", "nsswitch.conf", "resolv.conf", "localtime", "os-release"]):
                 return
-            self.log_event("high", "sensitive_file_access", comm, event.pid, event.ppid, pcomm, f"доступ к файлу: {fname}")
-
+            self.log_event("high", "sensitive_file_access", comm, event.pid, event.ppid, pcomm, f"Доступ к файлу: {fname}")
 
     def run(self):
         self.init_storage()

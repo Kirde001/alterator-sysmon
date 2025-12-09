@@ -1,4 +1,4 @@
-TODO: better installation process 'n' fix it ALREADY
+TODO: guide tp md + install with git clone + locally.sh
 
 ### Installation
 ```bash 
