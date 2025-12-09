@@ -4,7 +4,7 @@
 # Установочный скрипт для проекта syscall-eBPF
 #
 # Этот скрипт автоматизирует загрузку, сборку и установку пакетов
-# 'syscall-inspector' и 'alterator-syscall-inspector'.
+# 'syscall-inspector' и 'alterator-sysmon'.
 # ==============================================================================
 
 
@@ -95,12 +95,12 @@ build_rpms() {
 
 install_rpms() {
     info "Удаление старых версий (если есть)..."
-    rpm -e syscall-inspector alterator-syscall-inspector || true
+    rpm -e syscall-inspector alterator-syscall-inspector alterator-sysmon || true
 
     info "Установка новых RPM-пакетов..."
     local rpm_path="/home/$BUILD_USER/RPM/RPMS/noarch"
-   # rpm -Uvh "$rpm_path"/syscall-inspector-*.noarch.rpm "$rpm_path"/alterator-syscall-inspector-*.noarch.rpm
-    apt-get install -y "$rpm_path"/syscall-inspector-*.noarch.rpm "$rpm_path"/alterator-syscall-inspector-*.noarch.rpm
+    
+    apt-get install -y "$rpm_path"/syscall-inspector-*.noarch.rpm "$rpm_path"/alterator-sysmon-*.noarch.rpm
 
     info "Обновление конфигурации systemd..."
     systemctl daemon-reload
@@ -131,7 +131,7 @@ main() {
     cleanup
 
     success "Установка успешно завершена!"
-    info "Модуль 'Инспектор Syscall' теперь доступен в Alterator (acc) и веб-интерфейсе."
+    info "Модуль 'Системный мониторинг' (sysmon) теперь доступен в Alterator."
 }
 
 main "$@"

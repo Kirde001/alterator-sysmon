@@ -10,16 +10,16 @@ Source0:        %{name}-%{version}.tar.gz
 Requires:       python3-module-bcc
 
 %description
-An eBPF-based service for monitoring suspicious syscalls.
+An eBPF-based service for monitoring syscalls
 
-%package -n alterator-syscall-inspector
-Summary:        Alterator module for Syscall Inspector
+%package -n alterator-sysmon
+Summary:        Alterator module for syscall monitoring
 Group:          System/Configuration
 Requires:       %{name} = %{version}-%{release}
 Requires:       alterator
 
-%description -n alterator-syscall-inspector
-Alterator module to view data collected by the Syscall Inspector service.
+%description -n alterator-sysmon
+Alterator module to view data collected by the syscall inspector service
 
 %prep
 %setup -q -n %{_builddir_name}
@@ -35,13 +35,13 @@ make install DESTDIR=%{buildroot}
 %config(noreplace) /etc/syscall-inspector/config.conf
 %config(noreplace) /etc/syscall-inspector/rules.json
 
-%files -n alterator-syscall-inspector
-/usr/share/alterator/applications/syscall-inspector.desktop
-/usr/share/applications/syscall-inspector-launcher.desktop
-/usr/share/alterator/ui/syscall-inspector/
-/usr/lib/alterator/backend3/syscall-inspector
-/usr/share/alterator/help/ru_RU/syscall-inspector.html
-/usr/share/alterator/help/en_US/syscall-inspector.html
+%files -n alterator-sysmon
+/usr/share/alterator/applications/sysmon.desktop
+/usr/share/applications/sysmon-launcher.desktop
+/usr/share/alterator/ui/sysmon/
+/usr/lib/alterator/backend3/sysmon
+/usr/share/alterator/help/ru_RU/sysmon.html
+/usr/share/alterator/help/en_US/sysmon.html
 
 %post
 %systemd_post syscall-inspector.service

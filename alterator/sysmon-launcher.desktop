@@ -1,12 +1,9 @@
 [Desktop Entry]
 Type=Application
-Categories=X-Alterator-System
+Categories=System;Monitor;
 Icon=utilities-terminal
 Name=System monitoring
 Name[ru]=Системный мониторинг
-Comment=eBPF Security Monitor
+Comment=eBPF secutiry monitoring
 Comment[ru]=Мониторинг системных вызовов и угроз безопасности
-X-Alterator-Help=syscall-inspector
-Exec=acc-legacy /syscall-inspector
-[X-Alterator]
-Interface=org.altlinux.alterator.syscall_inspector
+Exec=acc-legacy /sysmon
