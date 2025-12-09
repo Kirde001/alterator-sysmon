@@ -33,6 +33,7 @@ make install DESTDIR=%{buildroot}
 /usr/sbin/syscall-inspector.py
 /usr/lib/systemd/system/syscall-inspector.service
 %config(noreplace) /etc/syscall-inspector/config.conf
+%config(noreplace) /etc/syscall-inspector/rules.json
 
 %files -n alterator-syscall-inspector
 /usr/share/alterator/applications/syscall-inspector.desktop

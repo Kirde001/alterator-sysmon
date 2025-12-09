@@ -1,0 +1,57 @@
+{
+  "ignore_extensions": [
+    ".png", ".svg", ".jpg", ".jpeg", ".gif", ".ico", ".xpm", ".bmp",
+    ".mo", ".po", ".qm",
+    ".so", ".so.0", ".so.1", ".so.2", ".so.3", ".so.4", ".so.5", ".so.6",
+    ".db", ".sqlite", ".sqlite3", ".db-shm", ".db-wal",
+    ".pyc", ".pyo", 
+    ".swp", ".tmp", ".log", ".txt",
+    ".service", ".desktop", ".theme", ".css", ".cache"
+  ],
+
+  "global_ignore_processes": [
+    "syscall-inspect", "wazuh-agent", "filebeat", "systemd", "auditd",
+    "dbus-daemon", "systemd-journal", "systemd-logind", "sqlite3",
+    "sed", "awk", "grep", "cat", "cut", "ls", "tr", "find", "sort",
+    "alterator-manager", "alterator-backend", "alterator-syste", 
+    "alterator-stand", "alterator-brows", "alterator-dump-",
+    "executor", "category-info", "help", "menu", "polkitd",
+    "systemctl", "sd_booted", "kworker", "cron", "crond",
+    "nm-dispatcher", "irqbalance"
+  ],
+
+  "filters": {
+    "process_execution": {
+      "mode": "include",
+      "rules": [
+        {"pattern": "nc", "severity": "high"},
+        {"pattern": "ncat", "severity": "high"},
+        {"pattern": "nmap", "severity": "high"},
+        {"pattern": "tcpdump", "severity": "high"},
+        {"pattern": "insmod", "severity": "critical"},
+        {"pattern": "ssh", "severity": "medium"},
+        {"pattern": "scp", "severity": "medium"},
+        {"pattern": "sudo", "severity": "medium"},
+        {"pattern": "bash", "severity": "low"},
+        {"pattern": "sh", "severity": "low"}
+      ]
+    },
+    "sensitive_file_access": {
+      "mode": "exclude",
+      "excludes": [
+        "/proc/*", "/sys/*", "/dev/*", "/run/*",
+        "/usr/lib/*", "/usr/lib64/*", "/lib/*", "/lib64/*",
+        "/usr/share/*", "/var/cache/*", "/var/lib/*", "/var/log/*",
+        "/tmp/*"
+      ],
+      "rules": [
+        {"pattern": "/etc/shadow", "severity": "critical"},
+        {"pattern": "/etc/passwd", "severity": "critical"},
+        {"pattern": "/etc/sudoers", "severity": "critical"},
+        {"pattern": "/root/.ssh/*", "severity": "critical"},
+        {"pattern": "/etc/*", "severity": "medium"},
+        {"pattern": "/home/*/.ssh/*", "severity": "high"}
+      ]
+    }
+  }
+}

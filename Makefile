@@ -10,6 +10,7 @@ install:
 	# config defaults
 	install -d $(DESTDIR)/etc/syscall-inspector/
 	install -m 0644 service/config.conf $(DESTDIR)/etc/syscall-inspector/config.conf
+	install -m 0644 service/rules.json $(DESTDIR)/etc/syscall-inspector/rules.json
 
 	# ui & backend
 	install -d $(DESTDIR)/usr/share/alterator/ui/syscall-inspector/
