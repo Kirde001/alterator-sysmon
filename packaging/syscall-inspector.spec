@@ -47,7 +47,7 @@ make install DESTDIR=%{buildroot}
 %systemd_post syscall-inspector.service
 
 %preun
-%systemd_preun syscall-inspector.service
+%systemd_preun syscall-inspector.service || true
 
 %postun
 %systemd_postun_with_restart syscall-inspector.service

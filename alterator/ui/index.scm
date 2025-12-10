@@ -26,7 +26,7 @@
 
   (hbox
     align "left"
-    (checkbox name "siem_enabled" text "Включить генерацию лого Syslog для SIEM " (when toggled (save-config)))
+    (checkbox name "siem_enabled" text "Включить генерацию логов syslog для SIEM " (when toggled (save-config)))
     (label text "      ")
     (label text "Формат логов: ")
     (combobox name "log_format" (when selected (save-config)))

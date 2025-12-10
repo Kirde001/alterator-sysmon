@@ -39,6 +39,7 @@ prepare_sources() {
     
     tar --exclude='.git' --exclude='install-locally.sh' --exclude='install.sh' \
         --exclude='*.tar.gz' --exclude='*.rpm' \
+	--exclude='*.swp' --exclude='*~' \
         --transform "s,^\.,$DIR_NAME," \
         -czf "/tmp/$ARCHIVE_NAME" .
 
@@ -54,15 +55,15 @@ build_rpms() {
     su - "$BUILD_USER" -c "rpmbuild -bb --define '_builddir_name $DIR_NAME' ~/RPM/SPECS/syscall-inspector.spec"
 }
 
+
 install_rpms() {
     info "Удаление старых версий..."
-    rpm -e syscall-inspector alterator-syscall-inspector alterator-sysmon 2>/dev/null || true
+    rpm -e --noscripts --notriggers alterator-sysmon syscall-inspector 2>/dev/null || true
 
     info "Установка собранных пакетов..."
     local rpm_dir="/home/$BUILD_USER/RPM/RPMS/noarch"
     
-    # Ищем alterator-sysmon-*.rpm
-    if rpm -Uvh --replacepkgs --replacefiles --nodeps "$rpm_dir"/syscall-inspector-*.rpm "$rpm_dir"/alterator-sysmon-*.rpm; then
+    if rpm -ivh --force --nodeps "$rpm_dir"/syscall-inspector-*.rpm "$rpm_dir"/alterator-sysmon-*.rpm; then
         success "RPM пакеты установлены."
     else
         error "Ошибка при установке RPM."
