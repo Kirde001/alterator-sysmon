@@ -1,6 +1,6 @@
 # Installation
 
-### Пока удалено - работает установка через клон 
+### Пока установка через релиз невозможна - работает установка через клон 
 ```bash 
 curl -L https://github.com/Kirde001/syscall-eBPF/raw/refs/heads/main/install.sh | sh
 ```
