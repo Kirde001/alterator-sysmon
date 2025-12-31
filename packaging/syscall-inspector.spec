@@ -1,7 +1,7 @@
 Name:           syscall-inspector
 Version:        1.0
 Release:        1
-Summary:        eBPF-based syscall data collector
+Summary:        eBPF monitoring
 License:        GPL
 Group:          System/Base
 BuildArch:      noarch

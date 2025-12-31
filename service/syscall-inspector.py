@@ -90,6 +90,10 @@ class RuleEngine:
 
     def _load_default_rules(self):
         return {
+            "priority_monitoring": {
+                "processes": [],
+                "files": []
+            },
             "ignore_extensions": [".png", ".jpg", ".so", ".pyc", ".swp"],
             "global_ignore_processes": ["syscall-inspect"],
             "global_ignore_parents": ["systemd"],
@@ -117,29 +121,40 @@ class RuleEngine:
         else:
             self.rules = self._load_default_rules()
 
+    def is_priority(self, comm, filename):
+        priority_procs = self.rules.get("priority_monitoring", {}).get("processes", [])
+        priority_files = self.rules.get("priority_monitoring", {}).get("files", [])
+
+        for pattern in priority_procs:
+            if fnmatch.fnmatch(comm, pattern):
+                return True
+        
+        if filename:
+            for pattern in priority_files:
+                if fnmatch.fnmatch(filename, pattern):
+                    return True
+        return False
+
     def is_process_ignored(self, comm):
         ignored = self.rules.get("global_ignore_processes", [])
-        if comm in ignored:
-            return True
-        for i in ignored:
-            if i.endswith("-") and comm.startswith(i):
+        for pattern in ignored:
+            if fnmatch.fnmatch(comm, pattern):
                 return True
         return False
 
     def is_parent_ignored(self, pcomm):
         ignored = self.rules.get("global_ignore_parents", [])
-        if pcomm in ignored:
-            return True
-        for i in ignored:
-             if i.endswith("-") and pcomm.startswith(i):
+        for pattern in ignored:
+            if fnmatch.fnmatch(pcomm, pattern):
                 return True
         return False
 
     def is_extension_ignored(self, filename):
-        exts = tuple(self.rules.get("ignore_extensions", []))
-        if not exts:
-            return False
-        return filename.endswith(exts) or filename.endswith("~")
+        exts = self.rules.get("ignore_extensions", [])
+        for pattern in exts:
+            if fnmatch.fnmatch(filename, pattern):
+                return True
+        return False
 
     def _check_list(self, value, pattern_list):
         for pattern in pattern_list:
@@ -333,31 +348,38 @@ class SyscallDaemon:
 
         comm = event.comm.decode('utf-8', 'replace').strip()
         pcomm = event.pcomm.decode('utf-8', 'replace').strip()
-
-        if event.type != 1:
-            if self.rule_engine.is_process_ignored(comm):
-                return
-
-        if self.rule_engine.is_parent_ignored(pcomm):
-            return
-            
         fname = event.fname.decode('utf-8', 'replace')
 
-        if self.rule_engine.is_extension_ignored(fname):
-            return
-        
-        if event.type == 1:
+        is_priority = self.rule_engine.is_priority(comm, fname)
+
+        if not is_priority:
+            if event.type != 1:
+                if self.rule_engine.is_process_ignored(comm):
+                    return
+
+            if self.rule_engine.is_parent_ignored(pcomm):
+                return
+                
+            if self.rule_engine.is_extension_ignored(fname):
+                return
+
+        if event.type == 1: 
             target_proc = fname if fname else comm
             
-            alert, severity = self.rule_engine.evaluate("process_execution", target_proc)
-            
-            if alert:
-                self.log_event(severity, "process_execution", target_proc, event.pid, event.ppid, comm, event.uid, f"Запуск команды: {fname}")
+            if is_priority:
+                self.log_event("high", "process_execution", target_proc, event.pid, event.ppid, comm, event.uid, f"Приоритетное отслеживание: {fname}")
+            else:
+                alert, severity = self.rule_engine.evaluate("process_execution", target_proc)
+                if alert:
+                    self.log_event(severity, "process_execution", target_proc, event.pid, event.ppid, comm, event.uid, f"Запуск команды: {fname}")
             
         elif event.type == 2:
-            alert, severity = self.rule_engine.evaluate("sensitive_file_access", fname)
-            if alert:
-                self.log_event(severity, "sensitive_file_access", comm, event.pid, event.ppid, pcomm, event.uid, f"Доступ к файлу: {fname}")
+            if is_priority:
+                self.log_event("high", "sensitive_file_access", comm, event.pid, event.ppid, pcomm, event.uid, f"Приоритетный доступ к файлу: {fname}")
+            else:
+                alert, severity = self.rule_engine.evaluate("sensitive_file_access", fname)
+                if alert:
+                    self.log_event(severity, "sensitive_file_access", comm, event.pid, event.ppid, pcomm, event.uid, f"Доступ к файлу: {fname}")
 
     def run(self):
         self.init_storage()

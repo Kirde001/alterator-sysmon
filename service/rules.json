@@ -1,85 +1,43 @@
 {
+  "priority_monitoring": {
+    "processes": [
+      "nginx",
+      "apache2",
+      "sshd",
+      "sudo",
+      "*sql*"
+    ],
+    "files": [
+      "/etc/shadow",
+      "/etc/passwd",
+      "/var/www/html/*",
+      "*.conf"
+    ]
+  },
+
   "ignore_extensions": [
-    ".png", ".svg", ".jpg", ".jpeg", ".gif", ".ico", ".xpm", ".bmp",
-    ".mo", ".po", ".qm",
-    ".so", ".so.0", ".so.1", ".so.2", ".so.3", ".so.4", ".so.5", ".so.6",
-    ".db", ".sqlite", ".sqlite3", ".db-shm", ".db-wal", ".pag",
-    ".pyc", ".pyo", ".class", ".jar",
-    ".swp", ".tmp", ".log", ".txt", ".lock", ".pid",
-    ".service", ".desktop", ".theme", ".css", ".cache", ".xml",
-    ".viminfo", ".vimrc", "~", ".history", ".lesshst",
-    ".rpm", ".spec"
+    "*"
   ],
 
   "global_ignore_parents": [
-    "systemd", "systemd-journal", "systemd-logind", "systemd-userdb",
-    "QDBusConnection", "dbus-daemon", "dbus-launch",
-    "kworker", "cron", "crond",
-    "alterator-manag", "alterator-backe", "alterator-servi", "alterator-sh-fu",
-    "polkitd", "rtkit-daemon", "wazuh-agent", "wazuh-agentd", "wazuh-execd",
-    "packagekitd", "rpm", "rpmbuild"
+    "*"
   ],
 
   "global_ignore_processes": [
-    "syscall-inspect", "wazuh-agent", "filebeat", "systemd", "auditd",
-    "dbus-daemon", "systemd-journal", "systemd-logind", "sqlite3",
-    "sed", "awk", "grep", "cat", "cut", "ls", "tr", "find", "sort", "wc", "rm", "mv", "cp", "touch",
-    "alterator-manager", "alterator-backend", "alterator-syste", 
-    "alterator-stand", "alterator-brows", "alterator-dump-",
-    "executor", "category-info", "help", "menu", "polkitd",
-    "systemctl", "sd_booted", "kworker", "cron", "crond",
-    "nm-dispatcher", "irqbalance", "pool-", "gnome-shell", "gsd-",
-    "wazuh-logcollec", "wazuh-syscheckd", "wazuh-modulesd",
-    "sh", "bash"
+    "*"
   ],
 
   "filters": {
     "process_execution": {
-      "mode": "include",
+      "mode": "exclude",
       "rules": [
-        {"pattern": "*nc", "severity": "high"},
-        {"pattern": "*ncat", "severity": "high"},
         {"pattern": "*nmap", "severity": "high"},
-        {"pattern": "*tcpdump", "severity": "high"},
-        {"pattern": "*insmod", "severity": "critical"},
-        {"pattern": "*modprobe", "severity": "high"},
-        {"pattern": "*ssh", "severity": "medium"},
-        {"pattern": "*scp", "severity": "medium"},
-        {"pattern": "*sudo", "severity": "medium"},
-        {"pattern": "*su", "severity": "medium"},
-        {"pattern": "*vim", "severity": "low"},
-        {"pattern": "*vi", "severity": "low"},
-        {"pattern": "*nano", "severity": "low"}
+        {"pattern": "*nc", "severity": "high"}
       ]
     },
     "sensitive_file_access": {
       "mode": "exclude",
-      "excludes": [
-        "/proc/*", "/sys/*", "/dev/*", "/run/*",
-        "/usr/lib/*", "/usr/lib64/*", "/lib/*", "/lib64/*",
-        "/usr/share/*", "/var/cache/*", "/var/lib/*", "/var/log/*",
-        "/tmp/*", "/home/*/.cache/*", "/home/*/.local/share/*",
-        "*.viminfo", "*.vimrc", "*~", "*.swp", "*.swpx",
-        
-        "/etc/ld.so.cache", "/etc/localtime", "/etc/resolv.conf", "/etc/hosts", "/etc/hostname",
-        "/etc/profile", "/etc/bashrc", "/etc/inputrc",
-        
-        "/etc/sudoers.d/*", "/etc/pam.d/*", "/etc/security/*", "/etc/nsswitch.conf",
-        "/usr/share/vim/*", "/home/*/.vim/*",
-        "/etc/rpm/*", "/usr/lib/rpm/*"
-      ],
-      "rules": [
-        {"pattern": "/etc/shadow", "severity": "critical"},
-        {"pattern": "/etc/gshadow", "severity": "critical"},
-        {"pattern": "/etc/passwd", "severity": "critical"},
-        {"pattern": "/etc/sudoers", "severity": "critical"},
-        {"pattern": "/root/.ssh/*", "severity": "critical"},
-        {"pattern": "/home/*/.ssh/*", "severity": "high"},
-        {"pattern": "/etc/cron*", "severity": "high"},
-        {"pattern": "/etc/init.d/*", "severity": "high"},
-        {"pattern": "/etc/systemd/system/*", "severity": "high"},
-        {"pattern": "/etc/*", "severity": "medium"}
-      ]
+      "rules": []
     }
   }
 }
